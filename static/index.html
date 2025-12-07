@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Plaid Test</title>
+    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+  </head>
+  <body>
+    <button id="link-button">Connect Bank</button>
+
+    <script>
+       document.getElementById('link-button').onclick = async function() {
+          const res = await fetch('/link/token/create', { method: 'POST' });
+          const data = await res.json();
+
+          if (!data.link_token) {
+            console.error('Missing link_token:', data);
+            alert('Error: No link token returned');
+            return;
+          }
+          console.log(data)
+          const handler = Plaid.create({
+            token: data.link_token,
+            onSuccess: async function(public_token) {
+              await fetch('/item/public_token/exchange', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ public_token })
+              });
+              alert('Bank linked!');
+            },
+            onExit: function(err, metadata) {
+              if (err) console.error('Exited with error:', err);
+              else console.log('Exited:', metadata);
+            },
+            onEvent: function(eventName, metadata) {
+              console.log(eventName, metadata)
+            }
+          });
+
+          handler.open();
+        };
+    </script>
+  </body>
+</html>
+
